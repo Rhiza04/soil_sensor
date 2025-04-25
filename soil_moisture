@@ -1,0 +1,72 @@
+from machine import Pin, ADC
+import time
+import network
+import urequests
+
+class SoilSensor:
+    def __init__(self, pin, min_moisture=0, max_moisture=100):
+        self.adc = ADC(Pin(pin))
+        self.adc.atten(ADC.ATTN_11DB)
+        self.adc.width(ADC.WIDTH_12BIT)
+        self.dry_value = 4095
+        self.wet_value = 1500
+
+    def read_raw(self):
+        return self.adc.read()
+
+    def read_moisture(self):
+        raw = self.adc.read()
+        raw = max(min(raw, self.dry_value), self.wet_value)  # Clamping nilai
+        moisture = 100 - ((raw - self.wet_value) / (self.dry_value - self.wet_value)) * 100
+        return round(max(0, min(100, moisture))), raw  # Return moisture DAN raw
+
+# Konfigurasi
+WIFI_SSID = "3R"
+WIFI_PASS = "kc27baruga"
+UBIDOTS_TOKEN = "BBUS-Iz84iN7hbrRlZQTbIyOyBL4SJssu6o"
+DEVICE_LABEL = "esp32"
+VARIABLE_LABEL = "soil_moisture"
+
+def connect_wifi():
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    if not wlan.isconnected():
+        print("Menghubungkan WiFi...")
+        wlan.connect(WIFI_SSID, WIFI_PASS)
+    while not wlan.isconnected():
+        time.sleep(0.5)  # Beri jeda
+    print("WiFi Terhubung:", wlan.ifconfig())
+
+def send_to_ubidots(value):
+    url = "http://industrial.api.ubidots.com/api/v1.6/devices/{}".format(DEVICE_LABEL)
+    headers = {
+        "X-Auth-Token": UBIDOTS_TOKEN,
+        "Content-Type": "application/json"
+    }
+    payload = {VARIABLE_LABEL: float(value)}  # Konversi eksplisit ke float
+    
+    try:
+        response = urequests.post(url, json=payload, headers=headers)
+        print("Status Code:", response.status_code)
+        print("Response:", response.text)
+        response.close()
+    except Exception as e:
+        print("Gagal mengirim:", e)
+
+def main():
+    sensor = SoilSensor(pin=32)
+    connect_wifi()
+    
+    while True:
+        moisture, raw = sensor.read_moisture()  # Unpack tuple return
+        print("Raw:", raw, "Moisture:", moisture, "%")  # Debugging
+        
+        try:
+            send_to_ubidots(moisture)
+        except Exception as e:
+            print("Error utama:", str(e))  # Cetak error spesifik
+        
+        time.sleep(30)  # Interval lebih lama
+
+if __name__ == "__main__":
+    main()
