@@ -20,12 +20,13 @@ class SoilSensor:
         moisture = 100 - ((raw - self.wet_value) / (self.dry_value - self.wet_value)) * 100
         return round(max(0, min(100, moisture))), raw  # Return moisture DAN raw
 
-# Konfigurasi
+
 WIFI_SSID = "3R"
 WIFI_PASS = "kc27baruga"
 UBIDOTS_TOKEN = "BBUS-Iz84iN7hbrRlZQTbIyOyBL4SJssu6o"
 DEVICE_LABEL = "esp32"
-VARIABLE_LABEL = "soil_moisture"
+MOISTURE_VARIABLE = "soil_moisture"
+RAW_VARIABLE = "raw_soil_moisture"  # Variabel baru untuk raw value
 
 def connect_wifi():
     wlan = network.WLAN(network.STA_IF)
@@ -37,13 +38,16 @@ def connect_wifi():
         time.sleep(0.5)  # Beri jeda
     print("WiFi Terhubung:", wlan.ifconfig())
 
-def send_to_ubidots(value):
+def send_to_ubidots(moisture_value, raw_value):
     url = "http://industrial.api.ubidots.com/api/v1.6/devices/{}".format(DEVICE_LABEL)
     headers = {
         "X-Auth-Token": UBIDOTS_TOKEN,
         "Content-Type": "application/json"
     }
-    payload = {VARIABLE_LABEL: float(value)}  # Konversi eksplisit ke float
+    payload = {
+        MOISTURE_VARIABLE: float(moisture_value),
+        RAW_VARIABLE: int(raw_value)  # Kirim nilai raw sebagai integer
+    }
     
     try:
         response = urequests.post(url, json=payload, headers=headers)
@@ -58,17 +62,15 @@ def main():
     connect_wifi()
     
     while True:
-        moisture, raw = sensor.read_moisture()  # Unpack tuple return
-        print("Raw:", raw, "Moisture:", moisture, "%")  # Debugging
+        moisture, raw = sensor.read_moisture()
+        print("Raw:", raw, "Moisture:", moisture, "%")
         
         try:
-            send_to_ubidots(moisture)
+            send_to_ubidots(moisture, raw)
         except Exception as e:
-            print("Error utama:", str(e))  # Cetak error spesifik
+            print("Error utama:", str(e))
         
-        time.sleep(30)  # Interval lebih lama
+        time.sleep(3)
 
 if __name__ == "__main__":
     main()
-
-#
