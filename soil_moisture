@@ -3,9 +3,9 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
-#define WIFI_SSID "Rhiza"
-#define WIFI_PASSWORD "mkn54321"
-#define API_KEY "AIzaSyAuxXEBQKiWP9zLghXtqCZaYZl94KbhfOw"
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
+#define API_KEY "" 
 #define DATABASE_URL "https://rhiza-project-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
 #define LED1_PIN 12
@@ -45,7 +45,7 @@ void setup() {
     Serial.println("signUp Ok");
     signupOK = true;
   } else {
-    Serial.print("%s\n", config.signer.signupError.message.c.str());
+    Serial.printf("%s\n", config.signer.signupError.message.c_str());
   }
 
   config.token_status_callback = tokenStatusCallback;
@@ -56,11 +56,11 @@ void setup() {
 
 void loop() {
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){
-    sendDataPrevMillis = milis();
-    sensorValue = analogRead(34);
+    sendDataPrevMillis = millis();
+    int sensorValue = analogRead(34);
     voltage = (float)analogReadMilliVolts(LDR_PIN)/1000;
 
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/ldr_data", sensorValue)){
+    if (Firebase.RTDB.setInt(&fbdo, "Sensor/raw_soil_sensor_data", sensorValue)){
       Serial.println();
       Serial.print(sensorValue);
     } else {
@@ -77,4 +77,3 @@ void loop() {
   }
 
 }
-
