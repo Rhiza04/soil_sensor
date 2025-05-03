@@ -1,16 +1,19 @@
-#include <WiFi.h>
+#include <WiFi.h>                 // wifi & firebase setup
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
-#define API_KEY "" 
-#define DATABASE_URL "https://rhiza-project-default-rtdb.asia-southeast1.firebasedatabase.app/"
+#include <Adafruit_Sensor.h> // dht 11 setup
+#include <DHT.h>
+#include <DHT_U.h>
+#define DHTPIN 4         // dht 11 on pin 4
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
 
-#define LED1_PIN 12
-#define LED2_PIN 14
-#define LDR_PIN 36
+#define WIFI_SSID "3R"
+#define WIFI_PASSWORD "kc27baruga"
+#define API_KEY "AIzaSyAuxXEBQKiWP9zLghXtqCZaYZl94KbhfOw" 
+#define DATABASE_URL "https://rhiza-project-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -18,8 +21,6 @@ FirebaseConfig config;
 
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
-int ldrData = 0;
-float voltage = 0.0;
 
 const int soilMoisturePin = 34; 
 const int dryValue = 4095;       
@@ -52,13 +53,17 @@ void setup() {
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
+  dht.begin(); // begin dht 11 read
 }
 
 void loop() {
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
     int sensorValue = analogRead(34);
-    voltage = (float)analogReadMilliVolts(LDR_PIN)/1000;
+    int moisturePercent = ((dryValue - sensorValue) * 100) / (dryValue - wetValue);
+
+    float temperature = dht.readTemperature();
+    float humidity = dht.readHumidity();
 
     if (Firebase.RTDB.setInt(&fbdo, "Sensor/raw_soil_sensor_data", sensorValue)){
       Serial.println();
@@ -66,14 +71,28 @@ void loop() {
     } else {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/voltage", voltage)){
+
+    if (Firebase.RTDB.setInt(&fbdo, "Sensor/percent_soil_sensor_data", moisturePercent)){
       Serial.println();
-      Serial.print(voltage);
+      Serial.print(moisturePercent);
       Serial.print(" - successfully saved to: " + fbdo.dataPath());
       Serial.println(" (" + fbdo.dataType() + ")");
     } else {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
-  }
 
+    if (Firebase.RTDB.setInt(&fbdo, "Sensor/humidity", humidity)){
+      Serial.println();
+      Serial.print(humidity);
+    } else {
+      Serial.println("FAILED: " + fbdo.errorReason());
+    }
+
+    if (Firebase.RTDB.setInt(&fbdo, "Sensor/temperature", temperature)){
+      Serial.println();
+      Serial.print(temperature);
+    } else {
+      Serial.println("FAILED: " + fbdo.errorReason());
+    }
+  }
 }
