@@ -3,6 +3,15 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
+#include <Wire.h>             // Inisialisasi 0.96 OLED Display menggunakan library Adafruit
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define lebarOLED 128 //inisialisasi ukuran OLED Display
+#define tinggiOLED 64
+
+Adafruit_SSD1306 OLED(lebarOLED, tinggiOLED, &Wire, -1);
+
 #include <Adafruit_Sensor.h> // dht 11 setup
 #include <DHT.h>
 #include <DHT_U.h>
@@ -28,6 +37,17 @@ const int wetValue = 1500;
 
 void setup() {
   Serial.begin(115200);
+
+  if(!OLED.begin(SSD_1306_SWITCHCAPVCC, 0x3C)){
+    Serial.print(F("Gagal menghubungkan OLED"));
+    while(1);
+  }
+  delay(2000);
+
+  OLED.clearDisplay();
+  OLED.setTextSize(1);
+  OLED.setTextColor(White);
+
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED){
