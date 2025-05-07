@@ -3,15 +3,6 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
-#include <Wire.h>             // Inisialisasi 0.96 OLED Display menggunakan library Adafruit
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-
-#define lebarOLED 128 //inisialisasi ukuran OLED Display
-#define tinggiOLED 64
-
-Adafruit_SSD1306 OLED(lebarOLED, tinggiOLED, &Wire, -1);
-
 #include <Adafruit_Sensor.h> // dht 11 setup
 #include <DHT.h>
 #include <DHT_U.h>
@@ -28,6 +19,16 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+
+// inisialisasi LDR sensor
+#define LDR_PIN 32
+
+int analogValue = 0;
+float voltage = 0.0;
+float resistance = 0.0;
+float lux = 0.0;
+
+
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
@@ -35,25 +36,10 @@ const int soilMoisturePin = 34;
 const int dryValue = 4095;       
 const int wetValue = 1500;       
 
-// inisialisasi LDR sensor
-const int ldrPin = 34;         // Gunakan pin ADC1 (misalnya GPIO 34)
-const float Vcc = 3.3;         // Tegangan referensi ESP32
-const float R = 10000.0;       // Nilai resistor tetap (10k ohm)
-
 void setup() {
   Serial.begin(115200);
 
-  analogReadResolution(12);    // Resolusi ADC 12-bit (0 - 4095) untuk LDR sensor
-
-  if(!OLED.begin(SSD_1306_SWITCHCAPVCC, 0x3C)){
-    Serial.print(F("Gagal menghubungkan OLED"));
-    while(1);
-  }
-  delay(2000);
-
-  OLED.clearDisplay();
-  OLED.setTextSize(1);
-  OLED.setTextColor(White);
+  analogReadResolution(12); // ESP32 has 12-bit ADC (0-4095) for LDR sensor
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
@@ -85,21 +71,10 @@ void setup() {
 
 void loop() {
 
-  // LDR sensor
-  int rawADC = analogRead(ldrPin);                 // Baca nilai ADC
-  float voltage = (rawADC / 4095.0) * Vcc;         // Konversi ke tegangan
-
-  if (voltage == 0) {
-    Serial.println("Tegangan nol, periksa koneksi!");
-    delay(1000);
-    return;
-  }
-
-  // Hitung resistansi LDR berdasarkan pembagi tegangan
-  float RLDR = (R * (Vcc - voltage)) / voltage;  
-
-  // Hitung lux dengan pendekatan empiris (disesuaikan jenis LDR)
-  float lux = 500 / pow(RLDR / 1000.0, 1.4);       
+  analogValue = analogRead(LDR_PIN);
+  voltage = (analogValue / 4095.0) * 3.3;
+  resistance = (3.3 - voltage) * 10000 / voltage;
+  lux = 500 / (resistance / 1000);
 
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
@@ -139,7 +114,7 @@ void loop() {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
 
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/light_intensity", lux)){
+    if (Firebase.RTDB.setInt(&fbdo, "Sensor/light_intesity", lux)){
       Serial.println();
       Serial.print(lux);
     } else {
