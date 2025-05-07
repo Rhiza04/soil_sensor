@@ -35,8 +35,15 @@ const int soilMoisturePin = 34;
 const int dryValue = 4095;       
 const int wetValue = 1500;       
 
+// inisialisasi LDR sensor
+const int ldrPin = 34;         // Gunakan pin ADC1 (misalnya GPIO 34)
+const float Vcc = 3.3;         // Tegangan referensi ESP32
+const float R = 10000.0;       // Nilai resistor tetap (10k ohm)
+
 void setup() {
   Serial.begin(115200);
+
+  analogReadResolution(12);    // Resolusi ADC 12-bit (0 - 4095) untuk LDR sensor
 
   if(!OLED.begin(SSD_1306_SWITCHCAPVCC, 0x3C)){
     Serial.print(F("Gagal menghubungkan OLED"));
@@ -77,6 +84,23 @@ void setup() {
 }
 
 void loop() {
+
+  // LDR sensor
+  int rawADC = analogRead(ldrPin);                 // Baca nilai ADC
+  float voltage = (rawADC / 4095.0) * Vcc;         // Konversi ke tegangan
+
+  if (voltage == 0) {
+    Serial.println("Tegangan nol, periksa koneksi!");
+    delay(1000);
+    return;
+  }
+
+  // Hitung resistansi LDR berdasarkan pembagi tegangan
+  float RLDR = (R * (Vcc - voltage)) / voltage;  
+
+  // Hitung lux dengan pendekatan empiris (disesuaikan jenis LDR)
+  float lux = 500 / pow(RLDR / 1000.0, 1.4);       
+
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
     int sensorValue = analogRead(34);
@@ -111,6 +135,13 @@ void loop() {
     if (Firebase.RTDB.setInt(&fbdo, "Sensor/temperature", temperature)){
       Serial.println();
       Serial.print(temperature);
+    } else {
+      Serial.println("FAILED: " + fbdo.errorReason());
+    }
+
+    if (Firebase.RTDB.setInt(&fbdo, "Sensor/light_intensity", lux)){
+      Serial.println();
+      Serial.print(lux);
     } else {
       Serial.println("FAILED: " + fbdo.errorReason());
     }
