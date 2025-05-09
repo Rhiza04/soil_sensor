@@ -10,10 +10,10 @@
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-#define WIFI_SSID "3RTV"
-#define WIFI_PASSWORD "vv110668"
-#define API_KEY "AIzaSyAuxXEBQKiWP9zLghXtqCZaYZl94KbhfOw" 
-#define DATABASE_URL "https://rhiza-project-default-rtdb.asia-southeast1.firebasedatabase.app/"
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
+#define API_KEY "" 
+#define DATABASE_URL ""
 
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -27,9 +27,9 @@ const int dryValue = 4095;
 const int wetValue = 1500;       
 
 // inisialisasi LDR sensor
-const int ldrPin = 34;         // Gunakan pin ADC1 (misalnya GPIO 34)
-const float Vcc = 3.3;         // Tegangan referensi ESP32
-const float R = 10000.0;       // Nilai resistor tetap (10k ohm)
+const int ldrPin = 34;         // LDR Sensor PIN 34
+const float Vcc = 3.3;         
+const float R = 10000.0;     
 
 void setup() {
   Serial.begin(115200);
@@ -66,58 +66,26 @@ void setup() {
 
 void loop() {
   // LDR sensor
-  int rawADC = analogRead(ldrPin);                 // Baca nilai ADC
-  float voltage = (rawADC / 4095.0) * Vcc;         // Konversi ke tegangan
+  int rawADC = analogRead(ldrPin);
+  float voltage = (rawADC / 4095.0) * Vcc;
 
-  // Hitung resistansi LDR berdasarkan pembagi tegangan
-  float RLDR = (R * (Vcc - voltage)) / voltage;  
-
-  // Hitung lux dengan pendekatan empiris (disesuaikan jenis LDR)
-  float lux = 500 / pow(RLDR / 1000.0, 1.4);       
+  float RLDR = (R * (Vcc - voltage)) / voltage;
+  float lux = 500 / pow(RLDR / 1000.0, 1.4);
 
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
-    int sensorValue = analogRead(34);
+
+    int sensorValue = analogRead(soilMoisturePin); 
     int moisturePercent = ((dryValue - sensorValue) * 100) / (dryValue - wetValue);
 
     float temperature = dht.readTemperature();
     float humidity = dht.readHumidity();
 
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/raw_soil_sensor_data", sensorValue)){
-      Serial.println();
-      Serial.print(sensorValue);
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/percent_soil_sensor_data", moisturePercent)){
-      Serial.println();
-      Serial.print(moisturePercent);
-      Serial.print(" - successfully saved to: " + fbdo.dataPath());
-      Serial.println(" (" + fbdo.dataType() + ")");
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/humidity", humidity)){
-      Serial.println();
-      Serial.print(humidity);
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/temperature", temperature)){
-      Serial.println();
-      Serial.print(temperature);
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setInt(&fbdo, "Sensor/light_intensity", lux)){
-      Serial.println();
-      Serial.print(lux);
-    } else {
-      Serial.println("FAILED: " + fbdo.errorReason());
-    }
+    // Kirim data ke Firebase
+    Firebase.RTDB.setInt(&fbdo, "Sensor/raw_soil_sensor_data", sensorValue);
+    Firebase.RTDB.setInt(&fbdo, "Sensor/percent_soil_sensor_data", moisturePercent);
+    Firebase.RTDB.setInt(&fbdo, "Sensor/humidity", humidity);
+    Firebase.RTDB.setInt(&fbdo, "Sensor/temperature", temperature);
+    Firebase.RTDB.setInt(&fbdo, "Sensor/light_intensity", lux);
   }
 }
