@@ -1,10 +1,2 @@
-https://stem.ubidots.com/app/dashboards/67b9333d4803931786ae440b
-
-Ubidots device label = "esp32"
-API Label = "esp32"
-Device ID = "680b7c8d57b9470010a181b7"
-Tokenn = "BBUS-Iz84iN7hbrRlZQTbIyOyBL4SJssu6o"
-
-variables
-"soil_moisture"
-"raw_soil_moisture"
+DHT11 DAT = pin D4
+HW-080 (Soil Sensor) -> pin menghadap ke atas, pin kanan adalah pin ground (pin kanan) HW-103, HW-103 AO = pin D32
