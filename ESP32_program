@@ -10,10 +10,10 @@
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
-#define API_KEY "" 
-#define DATABASE_URL ""
+#define WIFI_SSID "3RTV"
+#define WIFI_PASSWORD "vv110668"
+#define API_KEY "AIzaSyAuxXEBQKiWP9zLghXtqCZaYZl94KbhfOw" 
+#define DATABASE_URL "https://rhiza-project-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -22,8 +22,8 @@ FirebaseConfig config;
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
-const int soilMoisturePin = 32; // Soil sensor on pin 32
-const int dryValue = 4095;       
+const int soilMoisturePin = 34; // Soil sensor on pin 34 (harus pin tipe ADC1 karena ADC2 tidak dapat mengirim saat WiFi)
+const int dryValue = 4095;      
 const int wetValue = 1500;        
 
 void setup() {
@@ -55,6 +55,7 @@ void setup() {
   Firebase.reconnectWiFi(true);
 
   dht.begin(); // begin dht 11 read
+  delay(1000);
 }
 
 void loop() {
@@ -72,5 +73,8 @@ void loop() {
     Firebase.RTDB.setInt(&fbdo, "Sensor/percent_soil_sensor_data", moisturePercent);
     Firebase.RTDB.setInt(&fbdo, "Sensor/humidity", humidity);
     Firebase.RTDB.setInt(&fbdo, "Sensor/temperature", temperature);
+
+    Serial.println(sensorValue);
+    delay(1000);
   }
 }
